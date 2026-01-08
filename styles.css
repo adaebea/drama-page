@@ -22,7 +22,7 @@
   --spacing-md: 1.5rem;
   --spacing-lg: 2rem;
   --spacing-xl: 3rem;
-  --spacing-xxl: 7rem;
+  --spacing-xxl: 11rem;
 
   /* 动画时长 */
   --duration-fast: 0.2s;
@@ -796,6 +796,8 @@ button {
   margin: 0;
 }
 
+
+
 .custom-radio {
   position: absolute;
   top: 0;
@@ -895,4 +897,67 @@ button {
 .menu-link:active {
   color: #fff;
   opacity: 0.8;
+}
+
+/* ==================== Legal/Content Pages ==================== */
+body.scrolling-page {
+  overflow-y: auto;
+  height: auto;
+  padding-bottom: var(--spacing-xxl);
+}
+
+.legal-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: calc(60px + var(--spacing-md)) var(--spacing-md) var(--spacing-xl);
+}
+
+.legal-container h1 {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  margin-bottom: var(--spacing-lg);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.legal-container h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-primary);
+}
+
+.legal-container p, 
+.legal-container li {
+  font-size: 1rem; /* Standard readable size */
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.legal-container ul {
+  padding-left: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.legal-container li {
+  margin-bottom: var(--spacing-xs);
+}
+
+.legal-container a {
+  color: var(--color-yellow);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: opacity var(--duration-fast);
+}
+
+.legal-container a:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .legal-container h1 {
+    font-size: 2.5rem; /* Slightly smaller on mobile if needed, but var handles clamps */
+  }
 }
