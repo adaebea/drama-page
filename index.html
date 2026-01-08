@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Watch Free For 3 Days - Unlimited Drama Series">
+    <title>Perk Hub - Unlimited Drama Series</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 固定顶部导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="logo">
+                <span class="logo-text">Perk</span>
+                <span class="logo-highlight">Hub</span>
+            </div>
+            <button class="menu-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- 全屏滑动容器 -->
+    <main class="scroll-container">
+        <!-- Page 01: 免费试看3天 -->
+        <section class="page page-01" data-page="1">
+            <div class="hero-bg">
+                <img src="images/main-01.webp" alt="Drama Scene 1" class="hero-slide active" loading="eager">
+                <img src="images/main-02.webp" alt="Drama Scene 2" class="hero-slide" loading="lazy">
+                <img src="images/main-03.webp" alt="Drama Scene 3" class="hero-slide" loading="lazy">
+                <div class="hero-overlay"></div>
+            </div>
+            <div class="page-content">
+                <div class="text-content">
+                    <h1 class="headline">
+                        You’re<br>
+                        <span class="highlight">one step away</span><br>
+                        from the ending
+                    </h1>
+                    <p class="subheadline">Most viewers unlock it right here</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Page 02: 完整故事观看 -->
+        <section class="page page-03" data-page="2">
+            <div class="poster-wall">
+                <img src="images/poster-wall.webp" alt="Unlimited Content" loading="lazy">
+            </div>
+            <div class="page-mask"></div>
+            <div class="page-content">
+                <div class="text-content text-top">
+                    <h2 class="headline">
+                        Watch<br>
+                        <span class="highlight">The Full Story,</span><br>
+                        Not Fragments
+                    </h2>
+                    <p class="subheadline">Every episode. Every twist. No cuts.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Page 03: 无限内容 -->
+        <section class="page page-02" data-page="3">
+            <div class="page-content">
+                <div class="text-content">
+                    <h2 class="headline">
+                        <span class="highlight">Unlimited</span>
+                        <br>short dramas
+                    </h2>
+                    <p class="subheadline">One subscription. Endless stories.</p>
+                </div>
+                <div class="drama-grid">
+                    <img src="images/drama-wall.webp" alt="Drama Collection" loading="lazy">
+                </div>
+            </div>
+        </section>
+        
+
+        <!-- Page 04: 单一应用 -->
+        <section class="page page-04" data-page="4">
+            <div class="page-content">
+                <div class="text-content text-top">
+                    <h2 class="headline">
+                        More than<br>
+                        <span class="highlight">Just</span>
+                        shows
+                    </h2>
+                    <p class="subheadline">Get one $20 gift card<br>
+                        with your access</p>
+                </div>
+            </div>
+            <div class="app-icons">
+                <img src="images/icon-wall.webp" alt="All Apps in One" loading="lazy">
+            </div>
+            <div class="page-mask-gradient"></div>
+        </section>
+
+        <!-- Page 05: 功能特性 -->
+        <section class="page page-05" data-page="5">
+            <div class="page-content">
+                <div class="features-list">
+                    <div class="feature-item">
+                        <h3 class="feature-title highlight">Full Access, No Limits</h3>
+                        <p class="subheadline">Enjoy complete episodes with a single subscription.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3 class="feature-title highlight">Genres For Every Mood</h3>
+                        <p class="subheadline">A wide range of dramas, updated regularly.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3 class="feature-title highlight">Personalized Recommendations</h3>
+                        <p class="subheadline">Relevant suggestions, based on your preferences.</p>
+                    </div>
+                </div>
+                </div>
+            </div>
+            
+            <div class="contact-info">
+                <h3 class="contact-title">Contact US</h3>
+                <p class="contact-email">service@globalvipclubs.com</p>
+                <div class="contact-links">
+                    <a href="terms.html">Terms of Service</a>
+                    <span class="separator">|</span>
+                    <a href="privacy.html">Privacy Policy</a>
+                </div>
+                <div class="contact-links">
+                    <a href="instructions.html">Instructions</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 固定底部按钮 -->
+    <div class="bottom-cta">
+        <button class="cta-button">
+            <span class="cta-text">Unlock the ending</span>
+            <span class="cta-subtext">$6.99/week after 3days trial. Cancel Anytime.</span>
+        </button>
+    </div>
+
+    <!-- 页面指示器 -->
+    <div class="page-indicator">
+        <span class="dot active" data-target="1"></span>
+        <span class="dot" data-target="2"></span>
+        <span class="dot" data-target="3"></span>
+        <span class="dot" data-target="4"></span>
+        <span class="dot" data-target="5"></span>
+    </div>
+
+    <!-- 全屏菜单遮罩 -->
+    <div class="menu-overlay" id="menuOverlay">
+        <nav class="menu-nav">
+            <a href="terms.html" class="menu-link">Terms of Service</a>
+            <a href="privacy.html" class="menu-link">Privacy Policy</a>
+            <a href="instructions.html" class="menu-link">Instructions</a>
+        </nav>
+    </div>
+
+    <!-- 邮箱收集弹窗 -->
+    <div class="modal-overlay" id="emailModal">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="Close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6L18 18" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <h2 class="modal-title">Continue to unlock the ending</h2>
+            <p class="modal-subtitle">Enter your email to save your access</p>
+            
+            <div class="modal-form">
+                <input type="email" class="modal-input" placeholder="Email address" aria-label="Email address">
+                
+                <button class="modal-submit-btn">
+                    <span class="btn-text">Continue to payment</span>
+                    <span class="btn-subtext">No spam · Cancel Anytime</span>
+                </button>
+                
+                <div class="modal-agreement">
+                    <div class="radio-wrapper">
+                        <input type="checkbox" id="agreement" name="agreement" checked>
+                        <div class="custom-radio"></div>
+                    </div>
+                    <label for="agreement" class="agreement-text">
+                        By clicking the button, you agree to the <a href="privacy.html">Privacy Policy</a> and <a href="terms.html">Terms of Service</a>.
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
