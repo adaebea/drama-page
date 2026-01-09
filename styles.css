@@ -474,12 +474,10 @@ button {
   gap: 1px;
   padding: 8px;
   background: linear-gradient(135deg, #222225 30%, #101011 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transition: all var(--duration-normal);
   pointer-events: auto;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
 }
 
@@ -487,62 +485,46 @@ button {
 .cta-button::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 80%; /* Wider beam */
-  height: 100%;
-  background: linear-gradient(
-    to right,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0) 100%
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200%;
+  padding-bottom: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 50%,
+    #7a5cff 85%,
+    #00ffd5 90%,
+    #ff00c8 95%,
+    transparent 100%
   );
-  transform: skewX(-25deg);
-  animation: shimmer 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  pointer-events: none;
+  filter: blur(6px) drop-shadow(0 0 12px rgba(122, 92, 255, 0.5));
+  animation: halo-run 4.6s linear infinite;
+  z-index: -2;
 }
 
-@keyframes shimmer {
-  0% {
-    left: -120%;
+.cta-button::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: inherit;
+  background: #1a1a1a;
+  z-index: -1;
+}
+
+@keyframes halo-run {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
   }
-  30% {
-    left: 200%;
-  }
-  100% {
-    left: 200%;
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 
 .cta-text {
   font-size: 20px;
+  color: var(--color-text-primary);
   font-weight: 700;
-  /* Palette: White base with a larger pool of Pale Gold */
-  background: linear-gradient(120deg, #ffffff 20%, #f3e5ab 50%, #ffffff 80%);
-  background-size: 300% 300%;
-  color: #fff; /* Fallback */
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: textShine 10s linear infinite;
-}
-
-@keyframes textShine {
-  0% {
-    background-position: 0% 0%;
-  }
-  25% {
-    background-position: 100% 0%;
-  }
-  50% {
-    background-position: 100% 100%;
-  }
-  75% {
-    background-position: 0% 100%;
-  }
-  100% {
-    background-position: 0% 0%;
-  }
 }
 
 .cta-subtext {
