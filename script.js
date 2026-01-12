@@ -375,6 +375,16 @@ function initSpinWheel() {
 
     // 动画结束后 (4s) 可以添加庆祝效果或自动跳转
     setTimeout(() => {
+      // 触发彩屑动画
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          zIndex: 2200, // 必须高于转盘遮罩层 (2100)
+        });
+      }
+
       // 停留2秒后自动弹出邮箱弹窗
       setTimeout(() => {
         spinModal.classList.remove('active');
