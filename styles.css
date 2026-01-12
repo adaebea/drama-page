@@ -926,3 +926,171 @@ body.scrolling-page {
     font-size: 2.5rem; /* Slightly smaller on mobile if needed, but var handles clamps */
   }
 }
+
+/* ==================== 转盘弹窗样式 ==================== */
+.spin-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--duration-normal);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.spin-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.spin-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: scale(0.8);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.spin-modal-overlay.active .spin-content {
+  transform: scale(1);
+}
+
+.spin-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  color: var(--color-primary);
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  text-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.wheel-wrapper {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.1), 0 0 60px rgba(0, 0, 0, 0.6);
+}
+
+.wheel-pointer {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 40px solid #fff;
+  filter: drop-shadow(0 4px 2px rgba(0,0,0,0.3));
+}
+
+.wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1);
+  border: 4px solid #fff;
+  background: conic-gradient(
+    var(--color-primary) 0deg 40deg,
+    #222 40deg 80deg,
+    #000 80deg 120deg,
+    var(--color-primary) 120deg 160deg,
+    #222 160deg 200deg,
+    #000 200deg 240deg,
+    var(--color-primary) 240deg 280deg,
+    #222 280deg 320deg,
+    #000 320deg 360deg
+  );
+}
+
+.wheel-segment {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+
+.segment-text {
+  position: absolute;
+  left: -50px; /* Center text horizontally relative to transform point */
+  top: -50px; /* Center text vertically */
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Rotate to angle + offset to center of wedge (20deg) + move out radius + rotate text upright */
+  transform: rotate(calc(var(--i) * 40deg + 20deg)) translateY(-110px);
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.wheel-segment:nth-child(3n+1) .segment-text { color: #000; }
+.wheel-segment:nth-child(3n+2) .segment-text { color: #fff; }
+.wheel-segment:nth-child(3n+3) .segment-text { color: #fff; }
+
+.spin-btn-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, #e0e0e0);
+  border: 4px solid #fff;
+  box-shadow: 0 0 15px rgba(0,0,0,0.4);
+  z-index: 5;
+  font-weight: 900;
+  font-size: 16px;
+  color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.spin-btn-center:active {
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+.spin-close {
+  position: absolute;
+  top: -60px;
+  right: 0;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.spin-close:hover {
+  background: rgba(255,255,255,0.3);
+}
+}
