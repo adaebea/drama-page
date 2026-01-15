@@ -204,6 +204,7 @@
             placeholder="Email address"
             aria-label="Email address"
           />
+          <div class="input-error-msg"></div>
 
           <button class="modal-submit-btn">
             <span class="btn-text">Continue to payment</span>
@@ -212,7 +213,7 @@
 
           <div class="modal-agreement">
             <div class="radio-wrapper">
-              <input type="checkbox" id="agreement" name="agreement" checked />
+              <input type="checkbox" id="agreement" name="agreement" />
               <div class="custom-radio"></div>
             </div>
             <label for="agreement" class="agreement-text">
@@ -272,5 +273,49 @@
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <script src="script.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const submitBtn = document.querySelector('.modal-submit-btn');
+        const emailInput = document.querySelector('.modal-input');
+        const errorMsg = document.querySelector('.input-error-msg');
+        const agreementCheckbox = document.getElementById('agreement');
+
+        function showError(message) {
+          if (errorMsg) {
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+          }
+        }
+        function hideError() {
+          if (errorMsg) {
+            errorMsg.style.display = 'none';
+          }
+        }
+
+        function validateEmail(email) {
+          const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          return re.test(email);
+        }
+
+        if (submitBtn) {
+          submitBtn.addEventListener('click', function () {
+            hideError();
+            const email = emailInput.value.trim();
+
+            if (!validateEmail(email)) {
+              showError('Please enter a valid email address');
+              return;
+            }
+
+            if (!agreementCheckbox.checked) {
+              showError('Please agree to the Privacy Policy and Terms of Service');
+              return;
+            }
+
+            window.location.href = 'https://buy.stripe.com/4gM14geZd0UUaHK9jD6Zy01';
+          });
+        }
+      });
+    </script>
   </body>
 </html>

@@ -807,6 +807,16 @@ button {
   text-decoration: none;
 }
 
+.input-error-msg {
+  display: none;
+  color: #ff0000;
+  font-size: 12px;
+  text-align: left;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
 @media (max-width: 375px) {
   .modal-content {
     padding: 20px;

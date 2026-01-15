@@ -337,7 +337,7 @@ function initSpinWheel() {
       spinModal.classList.add('active');
       document.body.style.overflow = 'hidden';
     }
-  }, 8000);
+  }, 5000);
 
   // 关闭逻辑
   const closeSpin = () => {
