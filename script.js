@@ -109,6 +109,10 @@ function initCTAButton() {
 
   if (ctaButton) {
     ctaButton.addEventListener('click', () => {
+      // Meta Pixel: AddToCart
+      if (typeof fbq === 'function') {
+        fbq('track', 'AddToCart');
+      }
       // 显示弹窗
       if (modal) {
         modal.classList.add('active');
@@ -166,12 +170,48 @@ function initModal() {
       setTimeout(() => {
         submitBtn.style.transform = '';
 
-        // 这里可以添加实际的提交逻辑跳转
-        const input = modal.querySelector('input');
-        if (input) {
-          console.log('Submit clicked, email:', input.value);
+        const emailInput = modal.querySelector('.modal-input');
+        const errorMsg = modal.querySelector('.input-error-msg');
+        const agreementCheckbox = modal.querySelector('#agreement');
+
+        const showError = (message) => {
+          if (errorMsg) {
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+          }
+        };
+
+        const hideError = () => {
+          if (errorMsg) {
+            errorMsg.style.display = 'none';
+          }
+        };
+
+        const validateEmail = (email) => {
+          const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          return re.test(email);
+        };
+
+        hideError();
+        const email = emailInput.value.trim();
+
+        if (!validateEmail(email)) {
+          showError('Please enter a valid email address');
+          return;
         }
-        // alert("Proceeding to payment...");
+
+        if (agreementCheckbox && !agreementCheckbox.checked) {
+          showError('Please agree to the Privacy Policy and Terms of Service');
+          return;
+        }
+
+        // Meta Pixel: InitiateCheckout & Lead
+        if (typeof fbq === 'function') {
+          fbq('track', 'InitiateCheckout');
+          fbq('track', 'Lead');
+        }
+
+        window.location.href = 'https://buy.stripe.com/4gM14geZd0UUaHK9jD6Zy01';
       }, 150);
     });
   }
@@ -372,6 +412,11 @@ function initSpinWheel() {
     const totalDegrees = spins * 360 + randomTarget + jitter;
 
     wheel.style.transform = `rotate(${totalDegrees}deg)`;
+
+    // Meta Pixel: SpinWheel
+    if (typeof fbq === 'function') {
+      fbq('track', 'SpinWheel');
+    }
 
     // 动画结束后 (4s) 可以添加庆祝效果或自动跳转
     setTimeout(() => {
