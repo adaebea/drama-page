@@ -1,5 +1,145 @@
+// ==================== Pixel 常量 ====================
+const CHECKOUT_VALUE = 9.99;
+const CHECKOUT_CURRENCY = 'USD';
+const CHECKOUT_CONTENT_NAME = 'Unlock the ending';
+const CHECKOUT_URL = 'https://buy.stripe.com/dRm7sN7dHcuz4tagUv3cc00';
+const META_CAPI_ENDPOINT = '/api/meta-capi';
+
+function getSessionKey(key) {
+  return `meta_pixel:${key}`;
+}
+
+function hasTrackedOnce(key) {
+  try {
+    return sessionStorage.getItem(getSessionKey(key)) === '1';
+  } catch (error) {
+    return false;
+  }
+}
+
+function markTrackedOnce(key) {
+  try {
+    sessionStorage.setItem(getSessionKey(key), '1');
+  } catch (error) {
+    // Ignore storage errors to avoid blocking user journey.
+  }
+}
+
+function trackMeta(eventName, params = {}, options = {}) {
+  const { custom = false, onceKey = '', server = false, email = '' } = options;
+  if (onceKey && hasTrackedOnce(onceKey)) return;
+
+  const eventId = `${eventName}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
+  if (typeof window.fbq === 'function') {
+    if (custom) {
+      window.fbq('trackCustom', eventName, params, { eventID: eventId });
+    } else {
+      window.fbq('track', eventName, params, { eventID: eventId });
+    }
+  }
+
+  if (server) {
+    sendMetaCapiEvent({
+      event_name: eventName,
+      event_id: eventId,
+      custom_data: params,
+      event_source_url: window.location.href,
+      fbp: readCookie('_fbp'),
+      fbc: getFbcValue(),
+      em: email,
+      custom_event: custom,
+    });
+  }
+
+  if (onceKey) {
+    markTrackedOnce(onceKey);
+  }
+}
+
+function readCookie(name) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+function getFbcValue() {
+  const cookieFbc = readCookie('_fbc');
+  if (cookieFbc) return cookieFbc;
+
+  const fbclid = new URLSearchParams(window.location.search).get('fbclid');
+  if (!fbclid) return '';
+
+  return `fb.1.${Date.now()}.${fbclid}`;
+}
+
+function sendMetaCapiEvent(payload) {
+  const body = JSON.stringify(payload);
+
+  if (navigator.sendBeacon) {
+    try {
+      const blob = new Blob([body], { type: 'application/json' });
+      const ok = navigator.sendBeacon(META_CAPI_ENDPOINT, blob);
+      if (ok) return;
+    } catch (error) {
+      // Fall through to fetch.
+    }
+  }
+
+  fetch(META_CAPI_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+    keepalive: true,
+  }).catch(() => {
+    // Ignore network errors in client to avoid affecting UX.
+  });
+}
+
+function initPurchaseTrackingFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('purchase') !== '1') return;
+
+  const rawValue = Number(params.get('value'));
+  const value = Number.isFinite(rawValue) && rawValue > 0 ? rawValue : CHECKOUT_VALUE;
+  const rawCurrency = params.get('currency');
+  const currency = rawCurrency ? rawCurrency.toUpperCase() : CHECKOUT_CURRENCY;
+
+  trackMeta(
+    'Purchase',
+    {
+      value,
+      currency,
+      content_name: CHECKOUT_CONTENT_NAME,
+    },
+    { onceKey: `purchase:${window.location.search}`, server: true }
+  );
+}
+
+function initPolicyLinkTracking() {
+  const policyLinks = document.querySelectorAll(
+    'a[href="terms.html"], a[href="privacy.html"], a[href="instructions.html"]'
+  );
+
+  policyLinks.forEach((link) => {
+    link.addEventListener('click', () => {
+      const sectionClass =
+        link.closest('.menu-overlay, .contact-info, .modal-agreement')?.className || 'unknown';
+      trackMeta(
+        'PolicyLinkClick',
+        {
+          href: link.getAttribute('href'),
+          section: sectionClass,
+        },
+        { custom: true }
+      );
+    });
+  });
+}
+
 // ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded', () => {
+  initPurchaseTrackingFromQuery();
   initScrollAnimations();
   initPageIndicator();
   initNavbar();
@@ -7,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initMenuOverlay();
   initHeroCarousel();
   initSpinWheel();
+  initPolicyLinkTracking();
 });
 
 // ==================== 滚动动画 ====================
@@ -55,6 +196,13 @@ function initPageIndicator() {
       const targetSection = document.querySelector(`[data-page="${targetPage}"]`);
 
       if (targetSection) {
+        trackMeta(
+          'PageIndicatorClick',
+          {
+            target_page: targetPage,
+          },
+          { custom: true }
+        );
         targetSection.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
@@ -109,14 +257,30 @@ function initCTAButton() {
 
   if (ctaButton) {
     ctaButton.addEventListener('click', () => {
-      // Meta Pixel: AddToCart
-      if (typeof fbq === 'function') {
-        fbq('track', 'AddToCart');
-      }
+      trackMeta('AddToCart', {
+        value: CHECKOUT_VALUE,
+        currency: CHECKOUT_CURRENCY,
+        content_name: CHECKOUT_CONTENT_NAME,
+      }, { server: true });
+      trackMeta(
+        'CTAButtonClick',
+        {
+          location: 'bottom_cta',
+        },
+        { custom: true }
+      );
+
       // 显示弹窗
       if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden'; // 禁止背景滚动
+        trackMeta(
+          'EmailModalOpen',
+          {
+            source: 'bottom_cta',
+          },
+          { custom: true }
+        );
       }
     });
   }
@@ -144,6 +308,13 @@ function initModal() {
   if (closeBtn) {
     closeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      trackMeta(
+        'EmailModalClose',
+        {
+          reason: 'close_button',
+        },
+        { custom: true }
+      );
       closeModal();
     });
   }
@@ -151,6 +322,13 @@ function initModal() {
   // 点击遮罩层关闭
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
+      trackMeta(
+        'EmailModalClose',
+        {
+          reason: 'backdrop',
+        },
+        { custom: true }
+      );
       closeModal();
     }
   });
@@ -205,13 +383,26 @@ function initModal() {
           return;
         }
 
-        // Meta Pixel: InitiateCheckout & Lead
-        if (typeof fbq === 'function') {
-          fbq('track', 'InitiateCheckout');
-          fbq('track', 'Lead');
-        }
+        trackMeta(
+          'InitiateCheckout',
+          {
+            value: CHECKOUT_VALUE,
+            currency: CHECKOUT_CURRENCY,
+            content_name: CHECKOUT_CONTENT_NAME,
+          },
+          { server: true }
+        );
+        trackMeta(
+          'Lead',
+          {
+            content_name: 'Email Submit',
+          },
+          { server: true, email }
+        );
 
-        window.location.href = 'https://buy.stripe.com/4gM14geZd0UUaHK9jD6Zy01';
+        setTimeout(() => {
+          window.location.href = CHECKOUT_URL;
+        }, 120);
       }, 150);
     });
   }
@@ -304,9 +495,23 @@ function initMenuOverlay() {
     if (show) {
       menuOverlay.classList.add('active');
       document.body.style.overflow = 'hidden'; // Prevent scrolling
+      trackMeta(
+        'MenuOpen',
+        {
+          location: 'navbar',
+        },
+        { custom: true }
+      );
     } else {
       menuOverlay.classList.remove('active');
       document.body.style.overflow = ''; // Restore scrolling
+      trackMeta(
+        'MenuClose',
+        {
+          location: 'navbar',
+        },
+        { custom: true }
+      );
     }
   };
 
@@ -330,6 +535,13 @@ function initMenuOverlay() {
   // Close when clicking a link
   menuOverlay.querySelectorAll('.menu-link').forEach((link) => {
     link.addEventListener('click', () => {
+      trackMeta(
+        'MenuLinkClick',
+        {
+          href: link.getAttribute('href'),
+        },
+        { custom: true }
+      );
       toggleMenu(false);
     });
   });
@@ -376,6 +588,13 @@ function initSpinWheel() {
     ) {
       spinModal.classList.add('active');
       document.body.style.overflow = 'hidden';
+      trackMeta(
+        'SpinWheelModalShown',
+        {
+          trigger: 'timer',
+        },
+        { custom: true, onceKey: 'spin_modal_shown' }
+      );
     }
   }, 5000);
 
@@ -383,6 +602,13 @@ function initSpinWheel() {
   const closeSpin = () => {
     spinModal.classList.remove('active');
     document.body.style.overflow = '';
+    trackMeta(
+      'SpinWheelModalClose',
+      {
+        reason: 'close',
+      },
+      { custom: true }
+    );
   };
 
   if (closeBtn) {
@@ -413,10 +639,13 @@ function initSpinWheel() {
 
     wheel.style.transform = `rotate(${totalDegrees}deg)`;
 
-    // Meta Pixel: SpinWheel
-    if (typeof fbq === 'function') {
-      fbq('track', 'SpinWheel');
-    }
+    trackMeta(
+      'SpinWheelClick',
+      {
+        location: 'spin_modal',
+      },
+      { custom: true }
+    );
 
     // 动画结束后 (4s) 可以添加庆祝效果或自动跳转
     setTimeout(() => {
@@ -436,6 +665,14 @@ function initSpinWheel() {
         const emailModal = document.getElementById('emailModal');
         if (emailModal) {
           emailModal.classList.add('active');
+          document.body.style.overflow = 'hidden';
+          trackMeta(
+            'EmailModalOpen',
+            {
+              source: 'spin_wheel',
+            },
+            { custom: true }
+          );
         }
       }, 2000);
     }, 4000);
