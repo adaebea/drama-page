@@ -2,7 +2,7 @@
 const CHECKOUT_VALUE = 9.99;
 const CHECKOUT_CURRENCY = 'USD';
 const CHECKOUT_CONTENT_NAME = 'Unlock the ending';
-const CHECKOUT_URL = 'https://buy.stripe.com/dRm7sN7dHcuz4tagUv3cc00';
+const CHECKOUT_URL = 'https://buy.stripe.com/test_7sYbJ18yXbes52cdmYgA801';
 const META_CAPI_ENDPOINT = '/api/meta-capi';
 
 function getSessionKey(key) {
