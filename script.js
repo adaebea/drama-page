@@ -86,14 +86,18 @@ function sendMetaCapiEvent(payload) {
     }
   }
 
-  fetch(META_CAPI_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-    keepalive: true,
-  }).catch(() => {
-    // Ignore network errors in client to avoid affecting UX.
-  });
+  try {
+    fetch(META_CAPI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true,
+    }).catch(() => {
+      // Ignore network errors in client to avoid affecting UX.
+    });
+  } catch (error) {
+    // Ignore synchronous fetch init errors to avoid affecting UX.
+  }
 }
 
 function initPurchaseTrackingFromQuery() {
@@ -383,26 +387,30 @@ function initModal() {
           return;
         }
 
-        trackMeta(
-          'InitiateCheckout',
-          {
-            value: CHECKOUT_VALUE,
-            currency: CHECKOUT_CURRENCY,
-            content_name: CHECKOUT_CONTENT_NAME,
-          },
-          { server: true }
-        );
-        trackMeta(
-          'Lead',
-          {
-            content_name: 'Email Submit',
-          },
-          { server: true, email }
-        );
-
-        setTimeout(() => {
-          window.location.href = CHECKOUT_URL;
-        }, 120);
+        try {
+          trackMeta(
+            'InitiateCheckout',
+            {
+              value: CHECKOUT_VALUE,
+              currency: CHECKOUT_CURRENCY,
+              content_name: CHECKOUT_CONTENT_NAME,
+            },
+            { server: true }
+          );
+          trackMeta(
+            'Lead',
+            {
+              content_name: 'Email Submit',
+            },
+            { server: true, email }
+          );
+        } catch (error) {
+          // Never let tracking errors block checkout navigation.
+        } finally {
+          setTimeout(() => {
+            window.location.href = CHECKOUT_URL;
+          }, 120);
+        }
       }, 150);
     });
   }
