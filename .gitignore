@@ -1,0 +1,4 @@
+.vercel
+.env*.local
+api/_data/*.local.json
+api/_data/*.local.json.lock

@@ -1,8 +1,10 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const STORE_PATH = path.join(process.cwd(), 'api', '_data', 'kalos-store.json');
+const STORE_PATH = path.join(process.cwd(), 'api', '_data', 'kalos-store.local.json');
 const LOCK_PATH = `${STORE_PATH}.lock`;
+const KV_STORE_KEY = process.env.KALOS_KV_STORE_KEY || 'kalos:store';
+const KV_LOCK_KEY = process.env.KALOS_KV_LOCK_KEY || 'kalos:store:lock';
 
 function nowIso() {
   return new Date().toISOString();
@@ -13,6 +15,10 @@ function sleep(ms) {
 }
 
 async function withStoreLock(fn, { timeoutMs = 2500, staleMs = 30000 } = {}) {
+  if (hasKvConfig()) {
+    return withKvLock(fn, { timeoutMs, staleMs });
+  }
+
   const startedAt = Date.now();
   let lockHandle = null;
 
@@ -57,14 +63,122 @@ async function withStoreLock(fn, { timeoutMs = 2500, staleMs = 30000 } = {}) {
   }
 }
 
+function hasKvConfig() {
+  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+}
+
+function parseSeedCodes() {
+  const jsonCodes = process.env.KALOS_CODES_JSON;
+  if (jsonCodes) {
+    try {
+      const parsed = JSON.parse(jsonCodes);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item).trim()).filter(Boolean);
+      }
+    } catch (error) {
+      throw new Error('KALOS_CODES_JSON is not valid JSON.');
+    }
+  }
+
+  const csvCodes = process.env.KALOS_CODES_CSV || '';
+  return csvCodes
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function createInitialStore() {
+  return {
+    emails: [],
+    codes: parseSeedCodes().map((code) => ({
+      code,
+      status: 'available',
+      email: '',
+      reservedAt: '',
+      sessionId: '',
+      deliveredAt: '',
+      updatedAt: '',
+    })),
+  };
+}
+
+function hydrateCodesIfMissing(store) {
+  if (Array.isArray(store.codes) && store.codes.length > 0) {
+    return store;
+  }
+
+  const seededCodes = createInitialStore().codes;
+  if (seededCodes.length === 0) {
+    return store;
+  }
+
+  return {
+    ...store,
+    codes: seededCodes,
+  };
+}
+
+function getKvHeaders() {
+  return {
+    Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+async function kvRequest(command, ...args) {
+  const baseUrl = process.env.KV_REST_API_URL;
+  const encodedArgs = args.map((item) => encodeURIComponent(String(item)));
+  const url = `${baseUrl}/${[command, ...encodedArgs].join('/')}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: getKvHeaders(),
+  });
+  const result = await response.json();
+
+  if (!response.ok || result.error) {
+    throw new Error(result.error || `KV request failed: ${command}`);
+  }
+
+  return result.result;
+}
+
+async function withKvLock(fn, { timeoutMs = 2500, staleMs = 30000 } = {}) {
+  const startedAt = Date.now();
+  const token = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const locked = await kvRequest('set', KV_LOCK_KEY, token, 'NX', 'PX', staleMs);
+    if (locked === 'OK') {
+      try {
+        return await fn();
+      } finally {
+        const currentToken = await kvRequest('get', KV_LOCK_KEY);
+        if (currentToken === token) {
+          await kvRequest('del', KV_LOCK_KEY);
+        }
+      }
+    }
+
+    await sleep(25 + Math.floor(Math.random() * 75));
+  }
+
+  throw new Error('Store is busy, please retry.');
+}
+
 async function ensureStore() {
+  if (hasKvConfig()) {
+    const existingStore = await kvRequest('get', KV_STORE_KEY);
+    if (existingStore) return;
+
+    const initialStore = createInitialStore();
+    await kvRequest('set', KV_STORE_KEY, JSON.stringify(initialStore));
+    return;
+  }
+
   try {
     await fs.access(STORE_PATH);
   } catch (error) {
-    const initialStore = {
-      emails: [],
-      codes: [],
-    };
+    const initialStore = createInitialStore();
     await fs.mkdir(path.dirname(STORE_PATH), { recursive: true });
     await fs.writeFile(STORE_PATH, JSON.stringify(initialStore, null, 2));
   }
@@ -72,8 +186,10 @@ async function ensureStore() {
 
 async function readStore() {
   await ensureStore();
-  const raw = await fs.readFile(STORE_PATH, 'utf8');
-  const parsed = JSON.parse(raw);
+  const raw = hasKvConfig()
+    ? await kvRequest('get', KV_STORE_KEY)
+    : await fs.readFile(STORE_PATH, 'utf8');
+  const parsed = hydrateCodesIfMissing(JSON.parse(raw));
 
   if (!Array.isArray(parsed.emails)) parsed.emails = [];
   if (!Array.isArray(parsed.codes)) parsed.codes = [];
@@ -82,6 +198,11 @@ async function readStore() {
 }
 
 async function writeStore(store) {
+  if (hasKvConfig()) {
+    await kvRequest('set', KV_STORE_KEY, JSON.stringify(store));
+    return;
+  }
+
   await fs.mkdir(path.dirname(STORE_PATH), { recursive: true });
   await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2));
 }

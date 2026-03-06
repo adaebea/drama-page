@@ -449,7 +449,8 @@ function initModal() {
           const result = await readJsonSafely(response);
           if (!response.ok || !result.url) {
             throw new Error(
-              result.error ||
+              result.details ||
+                result.error ||
                 'Unable to start checkout. Make sure the local API server and Stripe env vars are configured.'
             );
           }

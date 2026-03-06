@@ -62,7 +62,7 @@ async function loadRedemptionCode() {
     const result = await readJsonSafely(response);
 
     if (!response.ok || !result.code) {
-      throw new Error(result.error || 'Unable to retrieve your Kalos code.');
+      throw new Error(result.details || result.error || 'Unable to retrieve your Kalos code.');
     }
 
     if (codeDisplay) {
