@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta
+      name="description"
+      content="Your payment was successful. Copy your Kalos redemption code and download Kalos."
+    />
+    <title>Payment Successful | Perk Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="success-body">
+    <main class="success-page">
+      <section class="success-card">
+        <div class="success-badge">Payment Completed</div>
+        <h1 class="success-title">Congratulations, your payment was successful.</h1>
+        <p class="success-subtitle">
+          Copy your Kalos redemption code below, then tap the button to download Kalos.
+        </p>
+
+        <div class="success-code-panel">
+          <div class="success-code-header">
+            <span class="success-code-label">Kalos Redemption Code</span>
+            <button class="success-copy-btn" id="copyCodeBtn" type="button">Copy code</button>
+          </div>
+          <button class="success-code-value" id="codeDisplay" type="button">
+            Loading your code...
+          </button>
+          <p class="success-copy-hint" id="copyHint">Tap the code or the button above to copy it.</p>
+        </div>
+
+        <a
+          class="success-download-btn"
+          href="https://kalostv.onelink.me/z8Ir/me7p1wfn"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Download Kalos
+        </a>
+
+        <p class="success-status" id="successStatus">Verifying your payment and preparing your code...</p>
+        <a class="success-home-link" href="/">Back to home</a>
+      </section>
+    </main>
+
+    <script src="success.js"></script>
+  </body>
+</html>

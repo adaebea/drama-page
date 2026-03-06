@@ -1,9 +1,24 @@
 // ==================== Pixel 常量 ====================
-const CHECKOUT_VALUE = 9.99;
+const CHECKOUT_VALUE = 12.99;
 const CHECKOUT_CURRENCY = 'USD';
 const CHECKOUT_CONTENT_NAME = 'Unlock the ending';
-const CHECKOUT_URL = 'https://buy.stripe.com/test_7sYbJ18yXbes52cdmYgA801';
 const META_CAPI_ENDPOINT = '/api/meta-capi';
+const CREATE_CHECKOUT_SESSION_ENDPOINT = '/api/create-checkout-session';
+
+async function readJsonSafely(response) {
+  const rawText = await response.text();
+  if (!rawText) return {};
+
+  try {
+    return JSON.parse(rawText);
+  } catch (error) {
+    return {
+      error: rawText.startsWith('<')
+        ? 'API endpoint is unavailable. Start the local server instead of opening the HTML file directly.'
+        : rawText,
+    };
+  }
+}
 
 function getSessionKey(key) {
   return `meta_pixel:${key}`;
@@ -301,6 +316,45 @@ function initModal() {
   const closeBtn = modal.querySelector('.modal-close');
   const modalContent = modal.querySelector('.modal-content');
   const submitBtn = modal.querySelector('.modal-submit-btn');
+  const emailInput = modal.querySelector('.modal-input');
+  const errorMsg = modal.querySelector('.input-error-msg');
+  const agreementCheckbox = modal.querySelector('#agreement');
+
+  const showError = (message) => {
+    if (errorMsg) {
+      errorMsg.textContent = message;
+      errorMsg.style.display = 'block';
+    }
+  };
+
+  const hideError = () => {
+    if (errorMsg) {
+      errorMsg.style.display = 'none';
+    }
+  };
+
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const setSubmitting = (isSubmitting) => {
+    if (!submitBtn) return;
+    submitBtn.disabled = isSubmitting;
+    submitBtn.classList.toggle('is-loading', isSubmitting);
+    const buttonText = submitBtn.querySelector('.btn-text');
+    const buttonSubtext = submitBtn.querySelector('.btn-subtext');
+
+    if (buttonText) {
+      buttonText.textContent = isSubmitting ? 'Redirecting to Stripe...' : 'Continue to payment';
+    }
+
+    if (buttonSubtext) {
+      buttonSubtext.textContent = isSubmitting
+        ? 'Please wait a moment'
+        : 'No spam · Cancel Anytime';
+    }
+  };
 
   // 关闭弹窗函数
   const closeModal = () => {
@@ -346,36 +400,13 @@ function initModal() {
 
   // 提交按钮交互
   if (submitBtn) {
-    submitBtn.addEventListener('click', () => {
+    submitBtn.addEventListener('click', async () => {
       // 简单的点击反馈
       submitBtn.style.transform = 'scale(0.95)';
-      setTimeout(() => {
+      setTimeout(async () => {
         submitBtn.style.transform = '';
-
-        const emailInput = modal.querySelector('.modal-input');
-        const errorMsg = modal.querySelector('.input-error-msg');
-        const agreementCheckbox = modal.querySelector('#agreement');
-
-        const showError = (message) => {
-          if (errorMsg) {
-            errorMsg.textContent = message;
-            errorMsg.style.display = 'block';
-          }
-        };
-
-        const hideError = () => {
-          if (errorMsg) {
-            errorMsg.style.display = 'none';
-          }
-        };
-
-        const validateEmail = (email) => {
-          const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          return re.test(email);
-        };
-
         hideError();
-        const email = emailInput.value.trim();
+        const email = emailInput?.value.trim() || '';
 
         if (!validateEmail(email)) {
           showError('Please enter a valid email address');
@@ -386,6 +417,8 @@ function initModal() {
           showError('Please agree to the Privacy Policy and Terms of Service');
           return;
         }
+
+        setSubmitting(true);
 
         try {
           trackMeta(
@@ -404,14 +437,35 @@ function initModal() {
             },
             { server: true, email }
           );
+
+          const response = await fetch(CREATE_CHECKOUT_SESSION_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          });
+
+          const result = await readJsonSafely(response);
+          if (!response.ok || !result.url) {
+            throw new Error(
+              result.error ||
+                'Unable to start checkout. Make sure the local API server and Stripe env vars are configured.'
+            );
+          }
+
+          window.location.href = result.url;
         } catch (error) {
-          // Never let tracking errors block checkout navigation.
-        } finally {
-          setTimeout(() => {
-            window.location.href = CHECKOUT_URL;
-          }, 120);
+          showError(error.message || 'Unable to start checkout. Please try again.');
+          setSubmitting(false);
         }
       }, 150);
+    });
+  }
+
+  if (emailInput) {
+    emailInput.addEventListener('input', () => {
+      hideError();
     });
   }
 }
