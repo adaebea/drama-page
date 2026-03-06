@@ -22,6 +22,28 @@
   <body class="success-body">
     <main class="success-page">
       <section class="success-card">
+        <div class="success-visual" aria-hidden="true">
+          <div class="success-glow success-glow-left"></div>
+          <div class="success-glow success-glow-right"></div>
+          <div class="success-check-ring">
+            <div class="success-check-core">
+              <svg
+                class="success-check-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5 12.5L9.5 17L19 7.5"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
         <div class="success-badge">Payment Completed</div>
         <h1 class="success-title">Congratulations, your payment was successful.</h1>
         <p class="success-subtitle">
@@ -53,6 +75,9 @@
       </section>
     </main>
 
+    <div class="success-toast" id="successToast" role="status" aria-live="polite"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <script src="success.js"></script>
   </body>
 </html>

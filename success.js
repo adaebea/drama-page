@@ -1,5 +1,6 @@
 const REDEEM_SESSION_ENDPOINT = '/api/redeem-session';
 const downloadButton = document.querySelector('.success-download-btn');
+let toastTimer = null;
 
 async function readJsonSafely(response) {
   const rawText = await response.text();
@@ -24,6 +25,34 @@ function setStatus(message, isError = false) {
   status.classList.toggle('is-error', isError);
 }
 
+function showToast(message) {
+  const toast = document.querySelector('#successToast');
+  if (!toast) return;
+
+  toast.textContent = message;
+  toast.classList.add('is-visible');
+
+  if (toastTimer) {
+    window.clearTimeout(toastTimer);
+  }
+
+  toastTimer = window.setTimeout(() => {
+    toast.classList.remove('is-visible');
+  }, 2200);
+}
+
+function launchSuccessConfetti() {
+  if (typeof window.confetti !== 'function') return;
+
+  window.confetti({
+    particleCount: 140,
+    spread: 78,
+    startVelocity: 40,
+    origin: { y: 0.35 },
+    colors: ['#ffe066', '#ffbf00', '#ffffff', '#7dd3fc'],
+  });
+}
+
 async function copyCode() {
   const codeDisplay = document.querySelector('#codeDisplay');
   const copyHint = document.querySelector('#copyHint');
@@ -36,10 +65,12 @@ async function copyCode() {
     if (copyHint) {
       copyHint.textContent = 'Copied. Keep this code and use it inside Kalos.';
     }
+    showToast('Code copied');
   } catch (error) {
     if (copyHint) {
       copyHint.textContent = 'Copy failed. Please long-press or select the code manually.';
     }
+    showToast('Copy failed');
   }
 }
 
@@ -71,6 +102,7 @@ async function loadRedemptionCode() {
     }
 
     setStatus('Your code is ready. Copy it before opening Kalos.');
+    launchSuccessConfetti();
 
     if (copyButton) {
       copyButton.addEventListener('click', copyCode);
