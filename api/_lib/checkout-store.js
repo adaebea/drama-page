@@ -67,6 +67,18 @@ function hasKvConfig() {
   return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }
 
+function isVercelRuntime() {
+  return Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.AWS_REGION);
+}
+
+function assertWritableStorageAvailable() {
+  if (!hasKvConfig() && isVercelRuntime()) {
+    throw new Error(
+      'Kalos code storage is not configured. Add KV_REST_API_URL and KV_REST_API_TOKEN in Vercel.'
+    );
+  }
+}
+
 function parseSeedCodes() {
   const jsonCodes = process.env.KALOS_CODES_JSON;
   if (jsonCodes) {
@@ -166,6 +178,8 @@ async function withKvLock(fn, { timeoutMs = 2500, staleMs = 30000 } = {}) {
 }
 
 async function ensureStore() {
+  assertWritableStorageAvailable();
+
   if (hasKvConfig()) {
     const existingStore = await kvRequest('get', KV_STORE_KEY);
     if (existingStore) return;
