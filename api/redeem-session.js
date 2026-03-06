@@ -1,4 +1,4 @@
-const { findCodeBySessionId, markCodeDelivered } = require('./_lib/checkout-store');
+const { deliverCodeForSession } = require('./_lib/checkout-store');
 const { retrieveCheckoutSession } = require('./_lib/stripe');
 
 module.exports = async (req, res) => {
@@ -22,24 +22,20 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const codeRecord = await findCodeBySessionId(sessionId);
-    if (!codeRecord) {
+    const deliveredCode = await deliverCodeForSession(sessionId);
+    if (!deliveredCode) {
       res.status(404).json({ error: 'No Kalos code is linked to this payment session.' });
-      return;
-    }
-
-    const deliveredCode = await markCodeDelivered(sessionId);
-    const codeValue = deliveredCode?.code || codeRecord.code;
-
-    if (!codeValue) {
-      res.status(500).json({ error: 'Kalos code record is unavailable for this payment session.' });
       return;
     }
 
     res.status(200).json({
       ok: true,
-      code: codeValue,
-      email: session.customer_details?.email || session.customer_email || codeRecord.email || '',
+      code: deliveredCode.code,
+      email:
+        session.customer_details?.email ||
+        session.customer_email ||
+        deliveredCode.email ||
+        '',
     });
   } catch (error) {
     res.status(500).json({

@@ -55,7 +55,15 @@ module.exports = async (req, res) => {
       code: reservedCode.code,
     });
 
-    await attachSessionToCode(reservedCode.code, session.id);
+    const attached = await attachSessionToCode(reservedCode.code, session.id);
+    if (!attached) {
+      await releaseReservedCode(reservedCode.code);
+      res.status(500).json({
+        error: 'Payment session created, but code linking failed. Please contact support.',
+        details: 'Unable to attach Stripe session id to reserved code.',
+      });
+      return;
+    }
 
     res.status(200).json({
       ok: true,

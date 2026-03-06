@@ -198,6 +198,21 @@ async function markCodeDelivered(sessionId) {
   });
 }
 
+async function deliverCodeForSession(sessionId) {
+  return await withStoreLock(async () => {
+    const store = await readStore();
+    const code = store.codes.find((item) => item.sessionId === sessionId);
+    if (!code) return null;
+
+    code.status = 'delivered';
+    code.deliveredAt = code.deliveredAt || nowIso();
+    code.updatedAt = nowIso();
+
+    await writeStore(store);
+    return { ...code };
+  });
+}
+
 module.exports = {
   normalizeEmail,
   recordEmailLead,
@@ -206,4 +221,5 @@ module.exports = {
   releaseReservedCode,
   findCodeBySessionId,
   markCodeDelivered,
+  deliverCodeForSession,
 };
