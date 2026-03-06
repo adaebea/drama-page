@@ -36,6 +36,9 @@ module.exports = async (req, res) => {
         session.customer_email ||
         deliveredCode.email ||
         '',
+      value:
+        typeof session.amount_total === 'number' ? Number((session.amount_total / 100).toFixed(2)) : null,
+      currency: session.currency ? String(session.currency).toUpperCase() : '',
     });
   } catch (error) {
     res.status(500).json({

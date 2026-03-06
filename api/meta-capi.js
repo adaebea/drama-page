@@ -86,7 +86,8 @@ module.exports = async (req, res) => {
     payload.test_event_code = process.env.META_TEST_EVENT_CODE;
   }
 
-  const graphUrl = `https://graph.facebook.com/${apiVersion}/${pixelId}/events`;
+  const graphUrl = new URL(`https://graph.facebook.com/${apiVersion}/${pixelId}/events`);
+  graphUrl.searchParams.set('access_token', accessToken);
 
   try {
     const response = await fetch(graphUrl, {

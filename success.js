@@ -1,6 +1,99 @@
 const REDEEM_SESSION_ENDPOINT = '/api/redeem-session';
+const META_CAPI_ENDPOINT = '/api/meta-capi';
+const CHECKOUT_VALUE = 12.99;
+const CHECKOUT_CURRENCY = 'USD';
+const CHECKOUT_CONTENT_NAME = 'Unlock the ending';
 const downloadButton = document.querySelector('.success-download-btn');
 let toastTimer = null;
+
+function getSessionKey(key) {
+  return `meta_pixel:${key}`;
+}
+
+function hasTrackedOnce(key) {
+  try {
+    return sessionStorage.getItem(getSessionKey(key)) === '1';
+  } catch (error) {
+    return false;
+  }
+}
+
+function markTrackedOnce(key) {
+  try {
+    sessionStorage.setItem(getSessionKey(key), '1');
+  } catch (error) {
+    // Ignore storage errors to avoid blocking user journey.
+  }
+}
+
+function readCookie(name) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+function getFbcValue() {
+  const cookieFbc = readCookie('_fbc');
+  if (cookieFbc) return cookieFbc;
+
+  const fbclid = new URLSearchParams(window.location.search).get('fbclid');
+  if (!fbclid) return '';
+
+  return `fb.1.${Date.now()}.${fbclid}`;
+}
+
+function sendMetaCapiEvent(payload) {
+  const body = JSON.stringify(payload);
+
+  if (navigator.sendBeacon) {
+    try {
+      const blob = new Blob([body], { type: 'application/json' });
+      const ok = navigator.sendBeacon(META_CAPI_ENDPOINT, blob);
+      if (ok) return;
+    } catch (error) {
+      // Fall through to fetch.
+    }
+  }
+
+  fetch(META_CAPI_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+    keepalive: true,
+  }).catch(() => {
+    // Ignore network errors in client to avoid affecting UX.
+  });
+}
+
+function trackPurchase({ sessionId, email = '', value = CHECKOUT_VALUE, currency = CHECKOUT_CURRENCY }) {
+  const onceKey = `purchase:${sessionId || window.location.search}`;
+  if (hasTrackedOnce(onceKey)) return;
+
+  const eventId = sessionId
+    ? `Purchase_${sessionId}`
+    : `Purchase_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const params = {
+    value,
+    currency,
+    content_name: CHECKOUT_CONTENT_NAME,
+  };
+
+  if (typeof window.fbq === 'function') {
+    window.fbq('track', 'Purchase', params, { eventID: eventId });
+  }
+
+  sendMetaCapiEvent({
+    event_name: 'Purchase',
+    event_id: eventId,
+    custom_data: params,
+    event_source_url: window.location.href,
+    fbp: readCookie('_fbp'),
+    fbc: getFbcValue(),
+    em: email,
+  });
+
+  markTrackedOnce(onceKey);
+}
 
 async function readJsonSafely(response) {
   const rawText = await response.text();
@@ -100,6 +193,13 @@ async function loadRedemptionCode() {
       codeDisplay.textContent = result.code;
       codeDisplay.dataset.code = result.code;
     }
+
+    trackPurchase({
+      sessionId,
+      email: result.email || '',
+      value: Number.isFinite(Number(result.value)) && Number(result.value) > 0 ? Number(result.value) : CHECKOUT_VALUE,
+      currency: result.currency || CHECKOUT_CURRENCY,
+    });
 
     setStatus('Your code is ready. Copy it before opening Kalos.');
     launchSuccessConfetti();
