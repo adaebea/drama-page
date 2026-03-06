@@ -29,10 +29,16 @@ module.exports = async (req, res) => {
     }
 
     const deliveredCode = await markCodeDelivered(sessionId);
+    const codeValue = deliveredCode?.code || codeRecord.code;
+
+    if (!codeValue) {
+      res.status(500).json({ error: 'Kalos code record is unavailable for this payment session.' });
+      return;
+    }
 
     res.status(200).json({
       ok: true,
-      code: deliveredCode.code,
+      code: codeValue,
       email: session.customer_details?.email || session.customer_email || codeRecord.email || '',
     });
   } catch (error) {

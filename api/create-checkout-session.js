@@ -32,9 +32,18 @@ module.exports = async (req, res) => {
     return;
   }
 
-  await recordEmailLead(email, { source: 'email-modal' });
+  let reservedCode = null;
+  try {
+    await recordEmailLead(email, { source: 'email-modal' });
+    reservedCode = await reserveNextCode(email);
+  } catch (error) {
+    res.status(503).json({
+      error: 'Checkout is busy right now. Please retry in a moment.',
+      details: String(error.message || error),
+    });
+    return;
+  }
 
-  const reservedCode = await reserveNextCode(email);
   if (!reservedCode) {
     res.status(409).json({ error: 'Kalos redemption codes are currently out of stock.' });
     return;
