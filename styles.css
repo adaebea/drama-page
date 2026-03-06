@@ -826,6 +826,36 @@ button {
   width: 100%;
 }
 
+.checkout-debug-panel {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(100, 116, 139, 0.22);
+}
+
+.checkout-debug-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.checkout-debug-log {
+  margin-top: 8px;
+  max-height: 144px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #475569;
+  word-break: break-word;
+}
+
+.checkout-debug-item + .checkout-debug-item {
+  margin-top: 6px;
+}
+
 .success-body {
   overflow: auto;
   min-height: 100vh;

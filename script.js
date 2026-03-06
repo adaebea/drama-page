@@ -4,6 +4,7 @@ const CHECKOUT_CURRENCY = 'USD';
 const CHECKOUT_CONTENT_NAME = 'Unlock the ending';
 const META_CAPI_ENDPOINT = '/api/meta-capi';
 const CREATE_CHECKOUT_SESSION_ENDPOINT = '/api/create-checkout-session';
+const CHECKOUT_DEBUG_ENABLED = new URLSearchParams(window.location.search).has('debugCheckout');
 
 async function readJsonSafely(response) {
   const rawText = await response.text();
@@ -18,6 +19,49 @@ async function readJsonSafely(response) {
         : rawText,
     };
   }
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function createCheckoutDebugger() {
+  const panel = document.querySelector('#checkoutDebugPanel');
+  const logNode = document.querySelector('#checkoutDebugLog');
+
+  if (!CHECKOUT_DEBUG_ENABLED || !panel || !logNode) {
+    return {
+      clear() {},
+      log() {},
+    };
+  }
+
+  panel.hidden = false;
+
+  return {
+    clear() {
+      logNode.innerHTML = '';
+    },
+    log(message, extra = '') {
+      const item = document.createElement('div');
+      item.className = 'checkout-debug-item';
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+      item.textContent = extra ? `[${time}] ${message}: ${extra}` : `[${time}] ${message}`;
+      logNode.appendChild(item);
+      logNode.scrollTop = logNode.scrollHeight;
+      console.log('[checkout-debug]', message, extra);
+    },
+  };
 }
 
 function getSessionKey(key) {
@@ -319,17 +363,20 @@ function initModal() {
   const emailInput = modal.querySelector('.modal-input');
   const errorMsg = modal.querySelector('.input-error-msg');
   const agreementCheckbox = modal.querySelector('#agreement');
+  const debug = createCheckoutDebugger();
 
   const showError = (message) => {
     if (errorMsg) {
       errorMsg.textContent = message;
       errorMsg.style.display = 'block';
     }
+    debug.log('error', message);
   };
 
   const hideError = () => {
     if (errorMsg) {
       errorMsg.style.display = 'none';
+      errorMsg.textContent = '';
     }
   };
 
@@ -405,8 +452,11 @@ function initModal() {
       submitBtn.style.transform = 'scale(0.95)';
       setTimeout(async () => {
         submitBtn.style.transform = '';
+        debug.clear();
+        debug.log('click', 'submit button pressed');
         hideError();
         const email = emailInput?.value.trim() || '';
+        debug.log('email', email || '(empty)');
 
         if (!validateEmail(email)) {
           showError('Please enter a valid email address');
@@ -419,8 +469,10 @@ function initModal() {
         }
 
         setSubmitting(true);
+        debug.log('state', 'submitting started');
 
         try {
+          debug.log('tracking', 'sending InitiateCheckout and Lead events');
           trackMeta(
             'InitiateCheckout',
             {
@@ -438,7 +490,8 @@ function initModal() {
             { server: true, email }
           );
 
-          const response = await fetch(CREATE_CHECKOUT_SESSION_ENDPOINT, {
+          debug.log('api', `POST ${CREATE_CHECKOUT_SESSION_ENDPOINT}`);
+          const response = await fetchWithTimeout(CREATE_CHECKOUT_SESSION_ENDPOINT, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -447,6 +500,8 @@ function initModal() {
           });
 
           const result = await readJsonSafely(response);
+          debug.log('api status', String(response.status));
+          debug.log('api response', JSON.stringify(result));
           if (!response.ok || !result.url) {
             throw new Error(
               result.details ||
@@ -455,10 +510,17 @@ function initModal() {
             );
           }
 
+          debug.log('redirect', result.url);
           window.location.href = result.url;
         } catch (error) {
-          showError(error.message || 'Unable to start checkout. Please try again.');
+          const message =
+            error.name === 'AbortError'
+              ? 'Request timed out. Check the Vercel deployment status and API environment variables.'
+              : error.message || 'Unable to start checkout. Please try again.';
+          showError(message);
+          debug.log('exception', message);
           setSubmitting(false);
+          debug.log('state', 'submitting reset');
         }
       }, 150);
     });
