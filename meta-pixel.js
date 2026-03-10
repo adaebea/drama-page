@@ -24,6 +24,8 @@
     document.head.appendChild(script);
   }
 
+  ensureFbqStub();
+
   async function initMetaPixel() {
     try {
       const response = await fetch(META_CONFIG_ENDPOINT, { cache: 'no-store' });
@@ -31,7 +33,6 @@
       const pixelId = String(result.pixelId || '').trim();
       if (!response.ok || !pixelId) return;
 
-      ensureFbqStub();
       window.__META_PIXEL_ID__ = pixelId;
       window.fbq('init', pixelId);
       window.fbq('track', 'PageView');

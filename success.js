@@ -27,6 +27,15 @@ function markTrackedOnce(key) {
   }
 }
 
+function hashString(input) {
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 function rememberCompletedPurchase({ sessionId, email = '', value, currency }) {
   if (!sessionId) return;
   try {
@@ -87,7 +96,7 @@ function trackPurchase({ sessionId, email = '', value = CHECKOUT_VALUE, currency
   if (hasTrackedOnce(onceKey)) return;
 
   const eventId = sessionId
-    ? `Purchase_${sessionId}`
+    ? `Purchase_${hashString(sessionId)}`
     : `Purchase_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   const params = {
     value,
