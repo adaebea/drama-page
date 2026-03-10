@@ -17,7 +17,7 @@ async function readJsonSafely(response) {
   } catch (error) {
     return {
       error: rawText.startsWith('<')
-        ? 'API endpoint is unavailable. Start the local server instead of opening the HTML file directly.'
+        ? 'The service is currently unavailable. Please try again later.'
         : rawText,
     };
   }
@@ -124,6 +124,17 @@ function redirectToSuccessFromStoredPurchase() {
 
   window.location.replace(`/success.html?${params.toString()}`);
   return true;
+}
+
+function getCheckoutErrorMessage(status, result) {
+  if (status === 409) return 'Redemption codes are currently out of stock. Please try again later.';
+  if (status === 503) return 'The system is busy. Please try again later.';
+  if (status === 400) return 'The email address appears to be invalid. Please check it and try again.';
+  if (status >= 500) return 'The service is temporarily unavailable. Please try again later.';
+  if (result && typeof result.error === 'string' && result.error.includes('already')) {
+    return 'This email has already been used for purchase. Please return to the success page to view the code.';
+  }
+  return 'Unable to start checkout at this time. Please try again later.';
 }
 
 function trackMeta(eventName, params = {}, options = {}) {
@@ -563,11 +574,7 @@ function initModal() {
           debug.log('api status', String(response.status));
           debug.log('api response', JSON.stringify(result));
           if (!response.ok || !result.url) {
-            throw new Error(
-              result.details ||
-                result.error ||
-                'Unable to start checkout. Make sure the local API server and Stripe env vars are configured.'
-            );
+            throw new Error(getCheckoutErrorMessage(response.status, result));
           }
 
           debug.log('redirect', result.url);
@@ -575,8 +582,8 @@ function initModal() {
         } catch (error) {
           const message =
             error.name === 'AbortError'
-              ? 'Request timed out. Check the Vercel deployment status and API environment variables.'
-              : error.message || 'Unable to start checkout. Please try again.';
+              ? 'The request timed out. Please try again later.'
+              : error.message || 'Unable to start checkout at this time. Please try again later.';
           showError(message);
           debug.log('exception', message);
           setSubmitting(false);

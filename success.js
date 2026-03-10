@@ -130,7 +130,7 @@ async function readJsonSafely(response) {
   } catch (error) {
     return {
       error: rawText.startsWith('<')
-        ? 'API endpoint is unavailable. Start the local server instead of opening the HTML file directly.'
+        ? 'The service is currently unavailable. Please try again later.'
         : rawText,
     };
   }
@@ -158,6 +158,14 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => {
     toast.classList.remove('is-visible');
   }, 2200);
+}
+
+function getRedeemErrorMessage(status) {
+  if (status === 400) return 'The order information is invalid. Please return from the payment result page.';
+  if (status === 402) return 'Payment has not completed yet. Please refresh this page shortly.';
+  if (status === 404) return 'No redemption code was found yet. Please refresh later or contact support.';
+  if (status >= 500) return 'The service is temporarily unavailable. Please try again later.';
+  return 'Unable to retrieve the redemption code at this time. Please try again later.';
 }
 
 function lockBackNavigation() {
@@ -209,7 +217,7 @@ async function loadRedemptionCode() {
   const copyButton = document.querySelector('#copyCodeBtn');
 
   if (!sessionId) {
-    setStatus('Missing Stripe session. Please contact support.', true);
+    setStatus('Order information is missing. Please return from the payment result page.', true);
     if (codeDisplay) codeDisplay.textContent = 'Code unavailable';
     return;
   }
@@ -221,7 +229,7 @@ async function loadRedemptionCode() {
     const result = await readJsonSafely(response);
 
     if (!response.ok || !result.code) {
-      throw new Error(result.details || result.error || 'Unable to retrieve your Kalos code.');
+      throw new Error(getRedeemErrorMessage(response.status));
     }
 
     if (codeDisplay) {
@@ -255,7 +263,7 @@ async function loadRedemptionCode() {
     }
   } catch (error) {
     if (codeDisplay) codeDisplay.textContent = 'Code unavailable';
-    setStatus(error.message || 'Unable to verify this payment session.', true);
+    setStatus(error.message || 'Unable to verify payment details at this time. Please try again later.', true);
   }
 }
 
