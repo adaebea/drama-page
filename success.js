@@ -3,6 +3,7 @@ const META_CAPI_ENDPOINT = '/api/meta-capi';
 const CHECKOUT_VALUE = 12.99;
 const CHECKOUT_CURRENCY = 'USD';
 const CHECKOUT_CONTENT_NAME = 'Unlock the ending';
+const COMPLETED_PURCHASE_KEY = 'perk_hub:completed_purchase';
 const downloadButton = document.querySelector('.success-download-btn');
 let toastTimer = null;
 
@@ -21,6 +22,22 @@ function hasTrackedOnce(key) {
 function markTrackedOnce(key) {
   try {
     sessionStorage.setItem(getSessionKey(key), '1');
+  } catch (error) {
+    // Ignore storage errors to avoid blocking user journey.
+  }
+}
+
+function rememberCompletedPurchase({ sessionId, email = '', value, currency }) {
+  if (!sessionId) return;
+  try {
+    const payload = {
+      sessionId,
+      email,
+      value,
+      currency,
+      at: Date.now(),
+    };
+    localStorage.setItem(COMPLETED_PURCHASE_KEY, JSON.stringify(payload));
   } catch (error) {
     // Ignore storage errors to avoid blocking user journey.
   }
@@ -134,6 +151,15 @@ function showToast(message) {
   }, 2200);
 }
 
+function lockBackNavigation() {
+  if (!window.history || typeof window.history.pushState !== 'function') return;
+
+  window.history.pushState({ success: true }, '', window.location.href);
+  window.addEventListener('popstate', () => {
+    window.location.replace('/');
+  });
+}
+
 function launchSuccessConfetti() {
   if (typeof window.confetti !== 'function') return;
 
@@ -201,6 +227,13 @@ async function loadRedemptionCode() {
       currency: result.currency || CHECKOUT_CURRENCY,
     });
 
+    rememberCompletedPurchase({
+      sessionId,
+      email: result.email || '',
+      value: Number.isFinite(Number(result.value)) && Number(result.value) > 0 ? Number(result.value) : CHECKOUT_VALUE,
+      currency: result.currency || CHECKOUT_CURRENCY,
+    });
+
     setStatus('Your code is ready. Copy it before opening Kalos.');
     launchSuccessConfetti();
 
@@ -223,4 +256,5 @@ if (downloadButton) {
   });
 }
 
+lockBackNavigation();
 loadRedemptionCode();

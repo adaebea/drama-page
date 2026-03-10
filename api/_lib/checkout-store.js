@@ -317,6 +317,26 @@ async function findCodeBySessionId(sessionId) {
   return code ? { ...code } : null;
 }
 
+async function findLatestDeliveredCodeByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  const store = await readStore();
+  const delivered = store.codes.filter(
+    (item) => item.email === normalizedEmail && item.status === 'delivered'
+  );
+
+  if (delivered.length === 0) return null;
+
+  delivered.sort((a, b) => {
+    const aTime = Date.parse(a.deliveredAt || a.updatedAt || '') || 0;
+    const bTime = Date.parse(b.deliveredAt || b.updatedAt || '') || 0;
+    return bTime - aTime;
+  });
+
+  return { ...delivered[0] };
+}
+
 async function markCodeDelivered(sessionId) {
   return await withStoreLock(async () => {
     const store = await readStore();
@@ -355,6 +375,7 @@ module.exports = {
   attachSessionToCode,
   releaseReservedCode,
   findCodeBySessionId,
+  findLatestDeliveredCodeByEmail,
   markCodeDelivered,
   deliverCodeForSession,
 };

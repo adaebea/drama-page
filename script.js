@@ -4,6 +4,8 @@ const CHECKOUT_CURRENCY = 'USD';
 const CHECKOUT_CONTENT_NAME = 'Unlock the ending';
 const META_CAPI_ENDPOINT = '/api/meta-capi';
 const CREATE_CHECKOUT_SESSION_ENDPOINT = '/api/create-checkout-session';
+const COMPLETED_PURCHASE_KEY = 'perk_hub:completed_purchase';
+const COMPLETED_TTL_MS = 1000 * 60 * 60 * 24 * 3;
 const CHECKOUT_DEBUG_ENABLED = new URLSearchParams(window.location.search).has('debugCheckout');
 
 async function readJsonSafely(response) {
@@ -82,6 +84,36 @@ function markTrackedOnce(key) {
   } catch (error) {
     // Ignore storage errors to avoid blocking user journey.
   }
+}
+
+function readStoredCompletedPurchase() {
+  try {
+    const raw = localStorage.getItem(COMPLETED_PURCHASE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.at || Date.now() - Number(parsed.at) > COMPLETED_TTL_MS) {
+      localStorage.removeItem(COMPLETED_PURCHASE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+function redirectToSuccessFromStoredPurchase() {
+  const completed = readStoredCompletedPurchase();
+  if (!completed || !completed.sessionId) return false;
+
+  const params = new URLSearchParams();
+  params.set('session_id', completed.sessionId);
+  if (completed.value) params.set('value', String(completed.value));
+  if (completed.currency) params.set('currency', String(completed.currency));
+  params.set('purchase', '1');
+
+  window.location.replace(`/success.html?${params.toString()}`);
+  return true;
 }
 
 function trackMeta(eventName, params = {}, options = {}) {
@@ -320,6 +352,9 @@ function initCTAButton() {
 
   if (ctaButton) {
     ctaButton.addEventListener('click', () => {
+      if (redirectToSuccessFromStoredPurchase()) {
+        return;
+      }
       trackMeta('AddToCart', {
         value: CHECKOUT_VALUE,
         currency: CHECKOUT_CURRENCY,
@@ -448,6 +483,9 @@ function initModal() {
   // 提交按钮交互
   if (submitBtn) {
     submitBtn.addEventListener('click', async () => {
+      if (redirectToSuccessFromStoredPurchase()) {
+        return;
+      }
       // 简单的点击反馈
       submitBtn.style.transform = 'scale(0.95)';
       setTimeout(async () => {
