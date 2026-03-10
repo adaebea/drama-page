@@ -86,6 +86,16 @@ function markTrackedOnce(key) {
   }
 }
 
+function hashString(input) {
+  const str = String(input || '');
+  let hash = 2166136261;
+  for (let i = 0; i < str.length; i += 1) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 function readStoredCompletedPurchase() {
   try {
     const raw = localStorage.getItem(COMPLETED_PURCHASE_KEY);
@@ -117,23 +127,34 @@ function redirectToSuccessFromStoredPurchase() {
 }
 
 function trackMeta(eventName, params = {}, options = {}) {
-  const { custom = false, onceKey = '', server = false, email = '' } = options;
+  const {
+    custom = false,
+    onceKey = '',
+    server = false,
+    email = '',
+    eventIdSeed = '',
+    eventId = '',
+  } = options;
   if (onceKey && hasTrackedOnce(onceKey)) return;
 
-  const eventId = `${eventName}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const resolvedEventId = eventId
+    ? String(eventId)
+    : eventIdSeed
+      ? `${eventName}_${hashString(eventIdSeed)}`
+      : `${eventName}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
   if (typeof window.fbq === 'function') {
     if (custom) {
-      window.fbq('trackCustom', eventName, params, { eventID: eventId });
+      window.fbq('trackCustom', eventName, params, { eventID: resolvedEventId });
     } else {
-      window.fbq('track', eventName, params, { eventID: eventId });
+      window.fbq('track', eventName, params, { eventID: resolvedEventId });
     }
   }
 
   if (server) {
     sendMetaCapiEvent({
       event_name: eventName,
-      event_id: eventId,
+      event_id: resolvedEventId,
       custom_data: params,
       event_source_url: window.location.href,
       fbp: readCookie('_fbp'),
@@ -195,6 +216,7 @@ function initPurchaseTrackingFromQuery() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('purchase') !== '1') return;
 
+  const sessionId = params.get('session_id') || '';
   const rawValue = Number(params.get('value'));
   const value = Number.isFinite(rawValue) && rawValue > 0 ? rawValue : CHECKOUT_VALUE;
   const rawCurrency = params.get('currency');
@@ -207,7 +229,7 @@ function initPurchaseTrackingFromQuery() {
       currency,
       content_name: CHECKOUT_CONTENT_NAME,
     },
-    { onceKey: `purchase:${window.location.search}`, server: true }
+    { onceKey: `purchase:${window.location.search}`, server: true, eventIdSeed: sessionId }
   );
 }
 
