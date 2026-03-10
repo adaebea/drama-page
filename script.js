@@ -388,11 +388,6 @@ function initCTAButton() {
       if (redirectToSuccessFromStoredPurchase()) {
         return;
       }
-      trackMeta('AddToCart', {
-        value: CHECKOUT_VALUE,
-        currency: CHECKOUT_CURRENCY,
-        content_name: CHECKOUT_CONTENT_NAME,
-      }, { server: true });
       trackMeta(
         'CTAButtonClick',
         {
