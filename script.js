@@ -223,7 +223,7 @@ function sendMetaCapiEvent(payload) {
   }
 }
 
-function initPurchaseTrackingFromQuery() {
+function initStartTrialTrackingFromQuery() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('purchase') !== '1') return;
 
@@ -234,13 +234,13 @@ function initPurchaseTrackingFromQuery() {
   const currency = rawCurrency ? rawCurrency.toUpperCase() : CHECKOUT_CURRENCY;
 
   trackMeta(
-    'Purchase',
+    'StartTrial',
     {
       value,
       currency,
       content_name: CHECKOUT_CONTENT_NAME,
     },
-    { onceKey: `purchase:${window.location.search}`, server: true, eventIdSeed: sessionId }
+    { onceKey: `start_trial:${window.location.search}`, server: true, eventIdSeed: sessionId }
   );
 }
 
@@ -267,7 +267,7 @@ function initPolicyLinkTracking() {
 
 // ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded', () => {
-  initPurchaseTrackingFromQuery();
+  initStartTrialTrackingFromQuery();
   initScrollAnimations();
   initPageIndicator();
   initNavbar();

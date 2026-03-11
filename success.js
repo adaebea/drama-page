@@ -91,13 +91,13 @@ function sendMetaCapiEvent(payload) {
   });
 }
 
-function trackPurchase({ sessionId, email = '', value = CHECKOUT_VALUE, currency = CHECKOUT_CURRENCY }) {
-  const onceKey = `purchase:${sessionId || window.location.search}`;
+function trackStartTrial({ sessionId, email = '', value = CHECKOUT_VALUE, currency = CHECKOUT_CURRENCY }) {
+  const onceKey = `start_trial:${sessionId || window.location.search}`;
   if (hasTrackedOnce(onceKey)) return;
 
   const eventId = sessionId
-    ? `Purchase_${hashString(sessionId)}`
-    : `Purchase_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    ? `StartTrial_${hashString(sessionId)}`
+    : `StartTrial_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   const params = {
     value,
     currency,
@@ -105,11 +105,11 @@ function trackPurchase({ sessionId, email = '', value = CHECKOUT_VALUE, currency
   };
 
   if (typeof window.fbq === 'function') {
-    window.fbq('track', 'Purchase', params, { eventID: eventId });
+    window.fbq('track', 'StartTrial', params, { eventID: eventId });
   }
 
   sendMetaCapiEvent({
-    event_name: 'Purchase',
+    event_name: 'StartTrial',
     event_id: eventId,
     custom_data: params,
     event_source_url: window.location.href,
@@ -237,7 +237,7 @@ async function loadRedemptionCode() {
       codeDisplay.dataset.code = result.code;
     }
 
-    trackPurchase({
+    trackStartTrial({
       sessionId,
       email: result.email || '',
       value: Number.isFinite(Number(result.value)) && Number(result.value) > 0 ? Number(result.value) : CHECKOUT_VALUE,

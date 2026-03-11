@@ -111,6 +111,7 @@ function createInitialStore() {
       deliveredAt: '',
       updatedAt: '',
     })),
+    purchases: [],
   };
 }
 
@@ -207,6 +208,7 @@ async function readStore() {
 
   if (!Array.isArray(parsed.emails)) parsed.emails = [];
   if (!Array.isArray(parsed.codes)) parsed.codes = [];
+  if (!Array.isArray(parsed.purchases)) parsed.purchases = [];
 
   return parsed;
 }
@@ -368,6 +370,53 @@ async function deliverCodeForSession(sessionId) {
   });
 }
 
+async function hasReportedPurchase({ subscriptionId = '', invoiceId = '' } = {}) {
+  if (!subscriptionId && !invoiceId) return false;
+  const store = await readStore();
+  return store.purchases.some(
+    (item) =>
+      (subscriptionId && item.subscriptionId === subscriptionId) ||
+      (invoiceId && item.invoiceId === invoiceId)
+  );
+}
+
+async function recordReportedPurchase({
+  subscriptionId = '',
+  invoiceId = '',
+  email = '',
+  amount = 0,
+  currency = '',
+} = {}) {
+  if (!subscriptionId && !invoiceId) return { reported: false, record: null };
+
+  return await withStoreLock(async () => {
+    const store = await readStore();
+    const existing = store.purchases.find(
+      (item) =>
+        (subscriptionId && item.subscriptionId === subscriptionId) ||
+        (invoiceId && item.invoiceId === invoiceId)
+    );
+
+    if (existing) {
+      return { reported: false, record: { ...existing } };
+    }
+
+    const record = {
+      subscriptionId,
+      invoiceId,
+      email: normalizeEmail(email),
+      amount,
+      currency,
+      reportedAt: nowIso(),
+    };
+
+    store.purchases.push(record);
+    await writeStore(store);
+
+    return { reported: true, record: { ...record } };
+  });
+}
+
 module.exports = {
   normalizeEmail,
   recordEmailLead,
@@ -378,4 +427,6 @@ module.exports = {
   findLatestDeliveredCodeByEmail,
   markCodeDelivered,
   deliverCodeForSession,
+  hasReportedPurchase,
+  recordReportedPurchase,
 };
