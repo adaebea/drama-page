@@ -1,4 +1,4 @@
-const { deliverCodeForSession } = require('./_lib/checkout-store');
+const { deliverOrAssignCodeForSession } = require('./_lib/checkout-store');
 const { retrieveCheckoutSession } = require('./_lib/stripe');
 
 module.exports = async (req, res) => {
@@ -22,7 +22,9 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const deliveredCode = await deliverCodeForSession(sessionId);
+    const deliveredCode = await deliverOrAssignCodeForSession(sessionId, {
+      email: session.customer_details?.email || session.customer_email || '',
+    });
     if (!deliveredCode) {
       res.status(404).json({ error: 'No Kalos code is linked to this payment session.' });
       return;

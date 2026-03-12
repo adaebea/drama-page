@@ -5,6 +5,8 @@ const STORE_PATH = path.join(process.cwd(), 'api', '_data', 'kalos-store.local.j
 const LOCK_PATH = `${STORE_PATH}.lock`;
 const KV_STORE_KEY = process.env.KALOS_KV_STORE_KEY || 'kalos:store';
 const KV_LOCK_KEY = process.env.KALOS_KV_LOCK_KEY || 'kalos:store:lock';
+const RESERVATION_TTL_MINUTES = Number(process.env.KALOS_RESERVATION_TTL_MINUTES || '30');
+const RESERVATION_TTL_MS = Math.max(1, RESERVATION_TTL_MINUTES) * 60 * 1000;
 
 function nowIso() {
   return new Date().toISOString();
@@ -129,6 +131,27 @@ function hydrateCodesIfMissing(store) {
     ...store,
     codes: seededCodes,
   };
+}
+
+function releaseExpiredReservations(store, nowMs = Date.now()) {
+  let changed = false;
+
+  for (const code of store.codes) {
+    if (code.status !== 'reserved') continue;
+    const reservedAtMs = Date.parse(code.reservedAt || '');
+    const isExpired = !reservedAtMs || nowMs - reservedAtMs >= RESERVATION_TTL_MS;
+    if (!isExpired) continue;
+
+    code.status = 'available';
+    code.email = '';
+    code.reservedAt = '';
+    code.sessionId = '';
+    code.deliveredAt = '';
+    code.updatedAt = nowIso();
+    changed = true;
+  }
+
+  return changed;
 }
 
 function mergeSeedCodesIntoStore(store) {
@@ -297,9 +320,13 @@ async function reserveNextCode(email) {
   const normalizedEmail = normalizeEmail(email);
   return await withStoreLock(async () => {
     const store = await readStore({ mergeSeedCodes: true });
+    const expiredReleased = releaseExpiredReservations(store);
     const availableCode = store.codes.find((item) => item.status === 'available');
 
     if (!availableCode) {
+      if (expiredReleased) {
+        await writeStore(store);
+      }
       return null;
     }
 
@@ -390,11 +417,17 @@ async function markCodeDelivered(sessionId) {
   });
 }
 
-async function deliverCodeForSession(sessionId) {
+async function deliverCodeForSession(sessionId, { email = '' } = {}) {
   return await withStoreLock(async () => {
-    const store = await readStore();
+    const store = await readStore({ mergeSeedCodes: true });
+    const expiredReleased = releaseExpiredReservations(store);
     const code = store.codes.find((item) => item.sessionId === sessionId);
-    if (!code) return null;
+    if (!code) {
+      if (expiredReleased) {
+        await writeStore(store);
+      }
+      return null;
+    }
 
     code.status = 'delivered';
     code.deliveredAt = code.deliveredAt || nowIso();
@@ -402,6 +435,41 @@ async function deliverCodeForSession(sessionId) {
 
     await writeStore(store);
     return { ...code };
+  });
+}
+
+async function deliverOrAssignCodeForSession(sessionId, { email = '' } = {}) {
+  return await withStoreLock(async () => {
+    const store = await readStore({ mergeSeedCodes: true });
+    const expiredReleased = releaseExpiredReservations(store);
+    const existing = store.codes.find((item) => item.sessionId === sessionId);
+    const now = nowIso();
+
+    if (existing) {
+      existing.status = 'delivered';
+      existing.deliveredAt = existing.deliveredAt || now;
+      existing.updatedAt = now;
+      await writeStore(store);
+      return { ...existing };
+    }
+
+    const available = store.codes.find((item) => item.status === 'available');
+    if (!available) {
+      if (expiredReleased) {
+        await writeStore(store);
+      }
+      return null;
+    }
+
+    available.status = 'delivered';
+    available.email = normalizeEmail(email) || available.email || '';
+    available.reservedAt = available.reservedAt || now;
+    available.sessionId = sessionId;
+    available.deliveredAt = now;
+    available.updatedAt = now;
+
+    await writeStore(store);
+    return { ...available };
   });
 }
 
@@ -462,6 +530,7 @@ module.exports = {
   findLatestDeliveredCodeByEmail,
   markCodeDelivered,
   deliverCodeForSession,
+  deliverOrAssignCodeForSession,
   hasReportedPurchase,
   recordReportedPurchase,
 };
