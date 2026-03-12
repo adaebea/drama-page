@@ -131,6 +131,33 @@ function hydrateCodesIfMissing(store) {
   };
 }
 
+function mergeSeedCodesIntoStore(store) {
+  const seedCodes = parseSeedCodes();
+  if (seedCodes.length === 0) {
+    return { store, changed: false };
+  }
+
+  const existing = new Set(store.codes.map((item) => item.code));
+  let changed = false;
+
+  for (const code of seedCodes) {
+    if (existing.has(code)) continue;
+    store.codes.push({
+      code,
+      status: 'available',
+      email: '',
+      reservedAt: '',
+      sessionId: '',
+      deliveredAt: '',
+      updatedAt: '',
+    });
+    existing.add(code);
+    changed = true;
+  }
+
+  return { store, changed };
+}
+
 function getKvHeaders() {
   return {
     Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}`,
@@ -199,7 +226,7 @@ async function ensureStore() {
   }
 }
 
-async function readStore() {
+async function readStore({ mergeSeedCodes = false } = {}) {
   await ensureStore();
   const raw = hasKvConfig()
     ? await kvRequest('get', KV_STORE_KEY)
@@ -209,6 +236,14 @@ async function readStore() {
   if (!Array.isArray(parsed.emails)) parsed.emails = [];
   if (!Array.isArray(parsed.codes)) parsed.codes = [];
   if (!Array.isArray(parsed.purchases)) parsed.purchases = [];
+
+  if (mergeSeedCodes) {
+    const { store, changed } = mergeSeedCodesIntoStore(parsed);
+    if (changed) {
+      await writeStore(store);
+    }
+    return store;
+  }
 
   return parsed;
 }
@@ -261,7 +296,7 @@ async function recordEmailLead(email, extra = {}) {
 async function reserveNextCode(email) {
   const normalizedEmail = normalizeEmail(email);
   return await withStoreLock(async () => {
-    const store = await readStore();
+    const store = await readStore({ mergeSeedCodes: true });
     const availableCode = store.codes.find((item) => item.status === 'available');
 
     if (!availableCode) {
