@@ -245,3 +245,9 @@ module.exports = async (req, res) => {
 
   res.status(200).json({ ok: true, reported: true });
 };
+
+module.exports.config = {
+  api: {
+    bodyParser: false,
+  },
+};
