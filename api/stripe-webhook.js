@@ -58,17 +58,21 @@ async function readRawBody(req) {
   if (req.body) {
     if (Buffer.isBuffer(req.body)) return req.body;
     if (typeof req.body === 'string') return Buffer.from(req.body);
-    if (typeof req.body === 'object') {
-      throw new Error('Stripe webhook requires raw body. Disable JSON body parsing for this route.');
-    }
+    // If body was already parsed into an object, try reading the stream anyway.
   }
 
-  return await new Promise((resolve, reject) => {
+  const rawBody = await new Promise((resolve, reject) => {
     const chunks = [];
     req.on('data', (chunk) => chunks.push(chunk));
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
+
+  if (rawBody.length === 0 && req.body && typeof req.body === 'object') {
+    throw new Error('Stripe webhook requires raw body. Disable JSON body parsing for this route.');
+  }
+
+  return rawBody;
 }
 
 async function fetchStripeCustomerEmail(customerId) {
