@@ -11,6 +11,27 @@ function getSessionKey(key) {
   return `meta_pixel:${key}`;
 }
 
+function getLocalKey(key) {
+  return `meta_pixel:local:${key}`;
+}
+
+function readLocalValue(key) {
+  try {
+    return localStorage.getItem(getLocalKey(key)) || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function storeLocalValue(key, value) {
+  if (!value) return;
+  try {
+    localStorage.setItem(getLocalKey(key), String(value));
+  } catch (error) {
+    // Ignore storage errors.
+  }
+}
+
 function hasTrackedOnce(key) {
   try {
     return sessionStorage.getItem(getSessionKey(key)) === '1';
@@ -58,14 +79,45 @@ function readCookie(name) {
   return match ? decodeURIComponent(match[1]) : '';
 }
 
+function getFbpValue() {
+  const cookieFbp = readCookie('_fbp');
+  if (cookieFbp) {
+    storeLocalValue('fbp', cookieFbp);
+    return cookieFbp;
+  }
+  return readLocalValue('fbp');
+}
+
 function getFbcValue() {
   const cookieFbc = readCookie('_fbc');
-  if (cookieFbc) return cookieFbc;
+  if (cookieFbc) {
+    storeLocalValue('fbc', cookieFbc);
+    return cookieFbc;
+  }
 
   const fbclid = new URLSearchParams(window.location.search).get('fbclid');
-  if (!fbclid) return '';
+  if (fbclid) {
+    const value = `fb.1.${Date.now()}.${fbclid}`;
+    storeLocalValue('fbc', value);
+    return value;
+  }
 
-  return `fb.1.${Date.now()}.${fbclid}`;
+  return readLocalValue('fbc');
+}
+
+function getFbLoginId() {
+  const params = new URLSearchParams(window.location.search);
+  const loginId =
+    params.get('fb_login_id') ||
+    params.get('login_id') ||
+    '';
+
+  if (loginId) {
+    storeLocalValue('fb_login_id', loginId);
+    return loginId;
+  }
+
+  return readLocalValue('fb_login_id');
 }
 
 function sendMetaCapiEvent(payload) {
@@ -113,8 +165,9 @@ function trackStartTrial({ sessionId, email = '', value = CHECKOUT_VALUE, curren
     event_id: eventId,
     custom_data: params,
     event_source_url: window.location.href,
-    fbp: readCookie('_fbp'),
+    fbp: getFbpValue(),
     fbc: getFbcValue(),
+    fb_login_id: getFbLoginId(),
     em: email,
   });
 

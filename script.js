@@ -70,6 +70,27 @@ function getSessionKey(key) {
   return `meta_pixel:${key}`;
 }
 
+function getLocalKey(key) {
+  return `meta_pixel:local:${key}`;
+}
+
+function readLocalValue(key) {
+  try {
+    return localStorage.getItem(getLocalKey(key)) || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function storeLocalValue(key, value) {
+  if (!value) return;
+  try {
+    localStorage.setItem(getLocalKey(key), String(value));
+  } catch (error) {
+    // Ignore storage errors.
+  }
+}
+
 function hasTrackedOnce(key) {
   try {
     return sessionStorage.getItem(getSessionKey(key)) === '1';
@@ -143,6 +164,7 @@ function trackMeta(eventName, params = {}, options = {}) {
     onceKey = '',
     server = false,
     email = '',
+    phone = '',
     eventIdSeed = '',
     eventId = '',
   } = options;
@@ -168,9 +190,11 @@ function trackMeta(eventName, params = {}, options = {}) {
       event_id: resolvedEventId,
       custom_data: params,
       event_source_url: window.location.href,
-      fbp: readCookie('_fbp'),
+      fbp: getFbpValue(),
       fbc: getFbcValue(),
+      fb_login_id: getFbLoginId(),
       em: email,
+      ph: phone,
       custom_event: custom,
     });
   }
@@ -186,14 +210,59 @@ function readCookie(name) {
   return match ? decodeURIComponent(match[1]) : '';
 }
 
+function getFbpValue() {
+  const cookieFbp = readCookie('_fbp');
+  if (cookieFbp) {
+    storeLocalValue('fbp', cookieFbp);
+    return cookieFbp;
+  }
+  return readLocalValue('fbp');
+}
+
 function getFbcValue() {
   const cookieFbc = readCookie('_fbc');
-  if (cookieFbc) return cookieFbc;
+  if (cookieFbc) {
+    storeLocalValue('fbc', cookieFbc);
+    return cookieFbc;
+  }
 
   const fbclid = new URLSearchParams(window.location.search).get('fbclid');
-  if (!fbclid) return '';
+  if (fbclid) {
+    const value = `fb.1.${Date.now()}.${fbclid}`;
+    storeLocalValue('fbc', value);
+    return value;
+  }
 
-  return `fb.1.${Date.now()}.${fbclid}`;
+  return readLocalValue('fbc');
+}
+
+function getFbLoginId() {
+  const params = new URLSearchParams(window.location.search);
+  const loginId =
+    params.get('fb_login_id') ||
+    params.get('login_id') ||
+    '';
+
+  if (loginId) {
+    storeLocalValue('fb_login_id', loginId);
+    return loginId;
+  }
+
+  return readLocalValue('fb_login_id');
+}
+
+function getPhoneFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const phone = params.get('phone') || params.get('ph') || '';
+  return normalizePhoneInput(phone);
+}
+
+function normalizePhoneInput(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return '';
+  return raw.startsWith('+') ? `+${digits}` : digits;
 }
 
 function sendMetaCapiEvent(payload) {
@@ -423,7 +492,7 @@ function initModal() {
   const closeBtn = modal.querySelector('.modal-close');
   const modalContent = modal.querySelector('.modal-content');
   const submitBtn = modal.querySelector('.modal-submit-btn');
-  const emailInput = modal.querySelector('.modal-input');
+  const emailInput = modal.querySelector('#emailInput') || modal.querySelector('.modal-input[type="email"]');
   const errorMsg = modal.querySelector('.input-error-msg');
   const agreementCheckbox = modal.querySelector('#agreement');
   const debug = createCheckoutDebugger();
@@ -522,6 +591,7 @@ function initModal() {
         debug.log('click', 'submit button pressed');
         hideError();
         const email = emailInput?.value.trim() || '';
+        const phone = getPhoneFromUrl();
         debug.log('email', email || '(empty)');
 
         if (!validateEmail(email)) {
@@ -553,7 +623,7 @@ function initModal() {
             {
               content_name: 'Email Submit',
             },
-            { server: true, email }
+            { server: true, email, phone }
           );
 
           debug.log('api', `POST ${CREATE_CHECKOUT_SESSION_ENDPOINT}`);

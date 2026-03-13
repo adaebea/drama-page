@@ -8,12 +8,74 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
-function getClientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.length > 0) {
-    return xff.split(',')[0].trim();
+function normalizePhone(phone) {
+  const raw = String(phone || '').trim();
+  if (!raw) return '';
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return '';
+  return digits;
+}
+
+function normalizeIp(value) {
+  if (!value) return '';
+  let ip = String(value).trim();
+  if (!ip) return '';
+
+  if (ip.startsWith('[')) {
+    const end = ip.indexOf(']');
+    if (end > 0) {
+      return ip.slice(1, end);
+    }
   }
-  return req.socket?.remoteAddress || '';
+
+  if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(ip)) {
+    return ip.split(':')[0];
+  }
+
+  return ip;
+}
+
+function isIpv4(ip) {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(ip);
+}
+
+function isIpv6(ip) {
+  return ip.includes(':') && !isIpv4(ip);
+}
+
+function getClientIp(req) {
+  const candidates = [];
+  const headerNames = [
+    'x-vercel-forwarded-for',
+    'x-forwarded-for',
+    'x-real-ip',
+    'cf-connecting-ip',
+    'true-client-ip',
+  ];
+
+  headerNames.forEach((name) => {
+    const value = req.headers[name];
+    if (typeof value === 'string' && value.trim()) {
+      candidates.push(...value.split(','));
+    }
+  });
+
+  if (req.socket?.remoteAddress) {
+    candidates.push(req.socket.remoteAddress);
+  }
+
+  const normalized = candidates
+    .map((item) => normalizeIp(item))
+    .filter(Boolean);
+
+  const ipv6 = normalized.find(isIpv6);
+  if (ipv6) return ipv6;
+
+  const ipv4 = normalized.find(isIpv4);
+  if (ipv4) return ipv4;
+
+  if (normalized.length > 0) return normalized[0];
+  return '';
 }
 
 function getBody(req) {
@@ -52,7 +114,9 @@ module.exports = async (req, res) => {
   const eventSourceUrl = body.event_source_url || '';
   const fbp = body.fbp || '';
   const fbc = body.fbc || '';
+  const fbLoginId = String(body.fb_login_id || body.login_id || '').trim();
   const email = normalizeEmail(body.em);
+  const phone = normalizePhone(body.ph || body.phone);
   const customEvent = Boolean(body.custom_event);
 
   if (!eventName || !eventId) {
@@ -66,7 +130,9 @@ module.exports = async (req, res) => {
   };
   if (fbp) userData.fbp = fbp;
   if (fbc) userData.fbc = fbc;
+  if (fbLoginId) userData.fb_login_id = fbLoginId;
   if (email) userData.em = [sha256(email)];
+  if (phone) userData.ph = [sha256(phone)];
 
   const payload = {
     data: [
